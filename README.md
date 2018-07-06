@@ -13,6 +13,3 @@ Installation & Usage
 
 - Import Plugins folder to a Unity project. 
 - Window -> IMP opens the baking tool
-
--------
-[License](LICENSE.md)
