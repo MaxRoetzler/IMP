@@ -17,6 +17,8 @@ Installation & Usage
 - Window -> IMP opens the baking tool
 
 Based on the work of [Ryan Brucks](http://shaderbits.com/blog/octahedral-impostors/)
+
 [BN11: Real-time Realistic Rendering and Lighting of Forests. Eric Bruneton, Fabrice Neyret](https://hal.inria.fr/hal-00650120/file/article.pdf) 
+
 [TSK07: Fast (Spherical) Light Field Rendering with Per-Pixel Depth. Severin Todt, Christof Rezk-Salama
 and Andreas Kolb](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.90.6202&rep=rep1&type=pdf)
