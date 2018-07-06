@@ -2,6 +2,10 @@
 
 **IMP** is a billboard imposter baker for Unity
 
+![png](https://www.dropbox.com/s/msxml7ymbas0pto/impQuads.PNG?raw=1)
+![gif](https://www.dropbox.com/s/l0973mqqh2qveab/mkvImposters.gif?raw=1)
+![gif](https://www.dropbox.com/s/gbqx91wwr2vzzu2/treeImposters.gif?raw=1)
+
 Features
 --------
 
