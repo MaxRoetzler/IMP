@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 32c4b5470d5a2b647b9910aba461f9b2
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_PersistentViewDataDictionary: {instanceID: 0}
+  - _processingShader: {fileID: 4800000, guid: 075ce22d9e9e5a24f9a379f7ece549f2, type: 3}
+  - _bakeWorldNormalDepthShader: {fileID: 4800000, guid: 68e5bb4b0abb8f340ac97eaaa24f90d2,
+      type: 3}
+  - _bakeAlbedoShader: {fileID: 4800000, guid: 56b838193e7495d4aa9ecb961c272a58, type: 3}
+  - _processingCompute: {fileID: 7200000, guid: 3e84bc2314377b24ebacba42159d115e,
+      type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
