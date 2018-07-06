@@ -1,0 +1,178 @@
+﻿#define GROUP_SIZE 256
+#define MAX_DIM_GROUPS 1024
+#define MAX_DIM_THREADS (GROUP_SIZE * MAX_DIM_GROUPS)
+
+#pragma kernel CSDilate
+#pragma kernel CSDistanceAlpha
+#pragma kernel CSDistanceAlphaGetMax
+#pragma kernel CSDistanceAlphaFinalize
+
+#define NEIGHBORS 8
+#define STEPS 64
+
+RWTexture2D<float4> Result;
+
+Texture2D<float4> Source;
+Texture2D<float4> SourceMask;
+RWStructuredBuffer<float> MaxOfMinDistances; //length of 1
+RWStructuredBuffer<float> MinDistances; //size of frame
+int MinDistancesLength;
+bool AllChannels;
+bool NormalsDepth; //if true, alpha border of uses 0.5 instead of 0.0
+
+[numthreads(GROUP_SIZE,1,1)] 
+void CSDilate(uint3 id : SV_DispatchThreadID)
+{
+	uint idx = id.x + id.y * MAX_DIM_THREADS;
+	
+	uint sourceWidth;
+    uint sourceHeight;
+    Source.GetDimensions(sourceWidth,sourceHeight);
+    
+    uint2 offsets[NEIGHBORS] = {uint2(-1,0),uint2(1,0),uint2(0,1),uint2(0,-1),uint2(-1,1),uint2(1,1),uint2(1,-1),uint2(-1,-1)};
+
+    uint x = idx % sourceHeight;
+    uint y = (idx-x) / sourceWidth;
+    
+    float4 color = Source.Load( uint3(x,y,0) );
+    float centerMask = SourceMask.Load( uint3(x,y,0) ).a;    
+    if ( centerMask < 1 )
+    {
+        bool exit = false;
+        for( int s=1; s<32; s++ )
+        {
+            for( int n=0; n<NEIGHBORS; n++ )
+            {
+                //check neighbor
+                uint2 of = offsets[n];
+                
+                uint3 xyz = uint3(x+(of.x*s),y+(of.y*s),0);
+                float neighborMask = SourceMask.Load( xyz ).a;
+                
+                //if neighbor filled use neighbor
+                if ( neighborMask > 0 )
+                {
+                    float4 neighborCol = Source.Load( xyz );
+                    color.rgb = neighborCol.rgb;
+                    if ( AllChannels )
+                    {
+                        color.a = neighborCol.a;
+                    }
+                    exit = true;
+                    break;
+                }
+            }
+            if ( exit ) break;
+        }
+    }
+
+    //clear out 1 pixel border to help reduce neighbor frame stretching due to clamp
+    if ( x == 0 || x == sourceWidth-1 || y == 0 || y == sourceHeight-1 )
+    {    
+        if ( NormalsDepth )
+        {
+            color = float4(0,0,0,0.5);
+        }
+        else
+        {
+            color = float4(0,0,0,0);
+        }
+    }
+
+	Result[uint2(x,y)] = color;
+}
+
+[numthreads(GROUP_SIZE,1,1)]
+void CSDistanceAlpha(uint3 id : SV_DispatchThreadID)
+{
+	uint idx = id.x + id.y * MAX_DIM_THREADS;
+	
+    uint sourceWidth;
+    uint sourceHeight;
+    Source.GetDimensions(sourceWidth,sourceHeight);
+    
+    uint x = idx % sourceHeight;
+    uint y = idx / sourceWidth;
+
+    float2 origin = float2(x,y);
+    
+    uint region = 64;
+    uint regionSamples = sourceWidth*sourceHeight;//*region;
+    uint halfRegion = 32;
+    float dist = 0;
+    
+    float centerMask = SourceMask.Load( uint3(x,y,0) ).a;  
+    float maxDistance = 0;
+    float minDistance = sourceWidth*sourceHeight;
+    
+    if ( centerMask > 0 )
+    {
+        //check all pixels within range
+        for( uint r=0; r<regionSamples; r++ )
+        {
+            uint rx = r % sourceHeight;
+            uint ry = r / sourceWidth;
+            
+            float2 coord = float2(rx,ry);
+            
+            float len = length( coord-origin );
+            
+            float mask = SourceMask.Load( uint3( coord.xy, 0 ) ).a;
+            if ( mask < 1 )
+            {
+                minDistance = min(len,minDistance);
+                
+                //GroupMemoryBarrierWithGroupSync();
+                //maxDistance = max(minDistance,maxDistance);
+            }
+        }
+        
+        MinDistances[idx] = minDistance;
+    }
+
+    
+
+    //dist = saturate(minDistance / max(0.0000001,maxxed));    
+    //
+    //float4 color = Source.Load( uint3(x,y,0) );
+    //Result[uint2(x,y)] = float4( color.rgb, dist );
+}
+
+[numthreads(1,1,1)]
+void CSDistanceAlphaGetMax(uint3 id : SV_DispatchThreadID)
+{
+	//uint idx = id.x + id.y * MAX_DIM_THREADS;
+    float maxDist = 0;
+    for( int i=0; i<MinDistancesLength; i++ )
+    {
+        maxDist = max(MinDistances[i],maxDist);
+    }
+    MaxOfMinDistances[0] = maxDist;
+}
+
+[numthreads(GROUP_SIZE,1,1)]
+void CSDistanceAlphaFinalize(uint3 id : SV_DispatchThreadID)
+{
+	uint idx = id.x + id.y * MAX_DIM_THREADS;
+	
+    uint sourceWidth;
+    uint sourceHeight;
+    Source.GetDimensions(sourceWidth,sourceHeight);
+    
+    uint x = idx % sourceHeight;
+    uint y = idx / sourceWidth;
+    
+    float4 color = Source.Load( uint3(x,y,0) );
+    
+    color.a = saturate( MinDistances[idx] / (MaxOfMinDistances[0]*0.5) );
+    
+    MinDistances[idx] = 0; //reset otherwise this frame's buffer sticks around for next!
+    
+    //clear out 1 pixel border to help reduce neighbor frame stretching due to clamp
+    if ( x == 0 || x == sourceWidth-1 || y == 0 || y == sourceHeight-1 )
+    {
+        color = float4(0,0,0,0);
+    }
+    
+    Result[uint2(x,y)] = color;
+}
