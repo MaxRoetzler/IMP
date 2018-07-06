@@ -29,7 +29,7 @@ Material:
     m_Floats:
     - _Cutoff: 0.397
     - _Glossiness: 0.382
-    - _ImposterBorderClamp: 2
+    - _ImposterBorderClamp: 6.78
     - _ImposterFrames: 12
     - _ImposterFullSphere: 0
     - _ImposterSize: 10.640627
